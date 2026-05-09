@@ -21,8 +21,8 @@
  * @module core/gameState
  */
 
-import { GameConfig, GameStatus } from '../core/constants.js';
-import { WordEvaluator } from '../core/evaluator.js';
+import { GameConfig, GameStatus } from './constants.js';
+import { WordEvaluator } from './evaluator.js';
 
 /**
  * GameState class

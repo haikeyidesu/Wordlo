@@ -185,4 +185,12 @@ header h1 {
     header h1 {
         font-size: 2rem;
     }
+
+    .row {
+        grid-template-columns: repeat(5, 50px);
+        gap: 3px;
+        justify-content: center;
+        width: 100%
+    }
+
 }

@@ -10,7 +10,7 @@ import { GameState } from './src/core/gameState.js';
 import { WordEvaluator } from './src/core/evaluator.js';
 
 // Import data modules
-import { createWordValidator, loadWords } from './src/data/words.js';
+import { WORDS, createWordValidator } from './src/data/words.js';
 
 // Import UI modules
 import { BoardRenderer } from './src/ui/boardRenderer.js';
@@ -32,15 +32,16 @@ class Game {
     this.keyboardContainer = document.getElementById('keyboard');
     this.messageContainer = document.getElementById('message-container');
     
-    // Initialize UI components (will be fully initialized after async setup)
+    // Initialize components
+    this.wordValidator = createWordValidator(WORDS);
+    this.wordSelector = new WordSelector(WORDS);
+    
     this.boardRenderer = new BoardRenderer(this.boardContainer);
     this.keyboardRenderer = new KeyboardRenderer(this.keyboardContainer);
     this.messageManager = new MessageManager(this.messageContainer);
     
     // Game state (initialized in startNewGame)
     this.gameState = null;
-    this.wordValidator = null;
-    this.wordSelector = null;
     
     // Input handler
     this.inputHandler = new InputHandler({
@@ -51,52 +52,12 @@ class Game {
     
     // Current row being played
     this.currentRow = 0;
-    
-    // Loading state
-    this.isLoading = true;
-  }
-  
-  /**
-   * Asynchronously initializes the game by loading the word list
-   */
-  async initialize() {
-    try {
-      // Show loading message
-      this.messageManager.show('Loading words...', { persistent: true });
-      
-      // Load words asynchronously and create validator
-      const wordsPromise = loadWords();
-      this.wordValidator = await createWordValidator(wordsPromise);
-      
-      // Create word selector with loaded words
-      const allWords = await wordsPromise;
-      this.wordSelector = new WordSelector(allWords);
-      
-      console.log(`Loaded ${this.wordValidator.size} words`);
-      
-      // Clear loading message
-      this.messageManager.clear();
-      
-      this.isLoading = false;
-      
-      return true;
-    } catch (error) {
-      console.error('Failed to initialize game:', error);
-      this.messageManager.show('Error loading words. Please refresh.', { persistent: true });
-      this.isLoading = true;
-      return false;
-    }
   }
   
   /**
    * Starts a new game
    */
   startNewGame() {
-    if (this.isLoading) {
-      console.warn('Game is still loading...');
-      return;
-    }
-    
     // Select a new secret word
     const secretWord = this.wordSelector.selectRandom();
     console.log('Secret word:', secretWord); // For debugging
@@ -229,15 +190,9 @@ class Game {
 // Initialize and start the game when DOM is ready
 let game = null;
 
-window.addEventListener('DOMContentLoaded', async () => {
+window.addEventListener('DOMContentLoaded', () => {
   game = new Game();
-  
-  // Initialize the game (load words asynchronously)
-  const initialized = await game.initialize();
-  
-  if (initialized) {
-    game.startNewGame();
-  }
+  game.startNewGame();
   
   // Expose game instance for debugging (can be removed in production)
   window.game = game;

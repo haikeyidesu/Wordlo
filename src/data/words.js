@@ -7,49 +7,21 @@
  * @module data/words
  */
 
-/**
- * Cached promise for loading words.
- * This ensures we only fetch the file once, even if createWordValidator is called multiple times.
- * @type {Promise<string[]>|null}
- */
-let wordsCachePromise = null;
+import wordList from 'word-list';
 
 /**
- * Asynchronously loads and filters the word list by fetching the words.txt file.
+ * Filters the imported word list to include only valid 5-letter lowercase English words.
  * 
  * Algorithm: Linear scan O(n) where n is total words in dictionary.
  * The filtering ensures:
  * - Exactly 5 characters (game requirement)
  * - Only alphabetic characters (no numbers/symbols)
  * - Lowercase only (for consistent comparison)
- * 
- * @returns {Promise<string[]>} Array of valid 5-letter words
  */
-export async function loadWords() {
-  if (wordsCachePromise) {
-    return wordsCachePromise;
-  }
-  
-  wordsCachePromise = (async () => {
-    // Fetch the words file from the node_modules directory
-    // Note: In production, you'd want to bundle this or serve it from a CDN
-    const response = await fetch('./node_modules/word-list/words.txt');
-    
-    if (!response.ok) {
-      throw new Error(`Failed to load words: ${response.status} ${response.statusText}`);
-    }
-    
-    const content = await response.text();
-    const allWords = content.split('\n').map(w => w.trim()).filter(w => w.length > 0);
-    
-    // Filter to only 5-letter lowercase English words
-    return allWords
-      .map(word => word.toLowerCase())                    // Normalize to lowercase
-      .filter(word => /^[a-z]{5}$/.test(word));           // Keep only 5-letter alphabetic words
-  })();
-  
-  return wordsCachePromise;
-}
+export const WORDS = wordList
+  .filter(word => typeof word === 'string')           // Ensure it's a string
+  .map(word => word.toLowerCase())                    // Normalize to lowercase
+  .filter(word => /^[a-z]{5}$/.test(word));           // Keep only 5-letter alphabetic words
 
 /**
  * Creates an optimized word validator using Set data structure.
@@ -62,18 +34,15 @@ export async function loadWords() {
  * - More efficient than Array.includes() which is O(n)
  * - Memory-efficient for large word lists
  * 
- * @param {Promise<string[]>|string[]} wordListPromise - Promise or array of valid words
- * @returns {Promise<Object>} Validator object with isValid, size, and getAll methods
+ * @param {string[]} wordList - Array of valid words
+ * @returns {Object} Validator object with isValid, size, and getAll methods
  * 
  * @example
- * const validator = await createWordValidator(loadWords());
+ * const validator = createWordValidator(WORDS);
  * validator.isValid('hello'); // true
  * validator.isValid('xyz');   // false
  */
-export async function createWordValidator(wordListPromise) {
-  // Await the word list if it's a promise
-  const wordList = await wordListPromise;
-  
+export function createWordValidator(wordList) {
   // Convert array to Set for O(1) lookup performance
   // Time Complexity: O(n) to build, O(1) per query
   // Space Complexity: O(n) to store all words

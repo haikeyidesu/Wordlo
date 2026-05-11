@@ -1,202 +1,253 @@
-/**
- * Main entry point for the Wordle game
- * Initializes and coordinates all game components
- * Follows the Facade pattern to simplify game initialization
- */
+// Word lists - 5 letter words
+const WORDS = [
+  'apple', 'beach', 'brain', 'bread', 'brush', 'chair', 'chest', 'chord',
+  'click', 'clock', 'cloud', 'dance', 'diary', 'drink', 'drive', 'earth',
+  'feast', 'field', 'fruit', 'glass', 'grape', 'green', 'ghost', 'heart',
+  'house', 'juice', 'light', 'lemon', 'melon', 'money', 'music', 'night',
+  'party', 'piano', 'pilot', 'plane', 'plant', 'plate', 'phone', 'power',
+  'radio', 'river', 'robot', 'shirt', 'shoes', 'skirt', 'snake', 'space',
+  'spoon', 'stack', 'stage', 'star', 'stone', 'storm', 'table', 'tiger',
+  'toast', 'touch', 'tower', 'track', 'trade', 'train', 'treat', 'truck',
+  'uncle', 'union', 'unity', 'value', 'video', 'visit', 'voice', 'waste',
+  'watch', 'water', 'while', 'white', 'woman', 'world', 'write', 'youth'
+];
 
-// Import core modules
-import { GameConfig, GameStatus } from './src/core/constants.js';
-import { GameState } from './src/core/gameState.js';
-import { WordEvaluator } from './src/core/evaluator.js';
+// Game state
+let secretWord = '';
+let currentGuess = '';
+let guesses = [];
+let gameOver = false;
+let currentRow = 0;
 
-// Import data modules
-import { WORDS, createWordValidator } from './src/data/words.js';
-
-// Import UI modules
-import { BoardRenderer } from './src/ui/boardRenderer.js';
-import { KeyboardRenderer } from './src/ui/keyboardRenderer.js';
-import { MessageManager } from './src/ui/messageManager.js';
-
-// Import utility modules
-import { InputHandler } from './src/utils/inputHandler.js';
-import { WordSelector } from './src/utils/wordSelector.js';
-
-/**
- * Game class
- * Main controller that orchestrates all game components
- */
-class Game {
-  constructor() {
-    // DOM elements
-    this.boardContainer = document.getElementById('board');
-    this.keyboardContainer = document.getElementById('keyboard');
-    this.messageContainer = document.getElementById('message-container');
-    
-    // Initialize components
-    this.wordValidator = createWordValidator(WORDS);
-    this.wordSelector = new WordSelector(WORDS);
-    
-    this.boardRenderer = new BoardRenderer(this.boardContainer);
-    this.keyboardRenderer = new KeyboardRenderer(this.keyboardContainer);
-    this.messageManager = new MessageManager(this.messageContainer);
-    
-    // Game state (initialized in startNewGame)
-    this.gameState = null;
-    
-    // Input handler
-    this.inputHandler = new InputHandler({
-      onLetter: (letter) => this.handleLetter(letter),
-      onEnter: () => this.handleEnter(),
-      onBackspace: () => this.handleBackspace()
-    });
-    
-    // Current row being played
-    this.currentRow = 0;
-  }
+// Initialize the game
+function initGame() {
+  // Pick a random word
+  secretWord = WORDS[Math.floor(Math.random() * WORDS.length)];
+  console.log('Secret word:', secretWord); // For debugging
   
-  /**
-   * Starts a new game
-   */
-  startNewGame() {
-    // Select a new secret word
-    const secretWord = this.wordSelector.selectRandom();
-    console.log('Secret word:', secretWord); // For debugging
-    
-    // Initialize game state
-    this.gameState = new GameState(secretWord, this.wordValidator);
-    this.currentRow = 0;
-    
-    // Render UI components
-    this.boardRenderer.render();
-    this.keyboardRenderer.render();
-    
-    // Set up keyboard listeners
-    this.keyboardRenderer.addClickListeners((key) => {
-      this.inputHandler.handleVirtualInput(key);
-    });
-    
-    // Enable input
-    this.inputHandler.enable();
-    
-    // Clear any messages
-    this.messageManager.clear();
-    
-    console.log(`New game started. Word list size: ${this.wordValidator.size}`);
-  }
+  // Create the board
+  createBoard();
   
-  /**
-   * Handles letter input
-   * @param {string} letter - The letter to add
-   */
-  handleLetter(letter) {
-    if (this.gameState.isGameOver()) return;
-    
-    const added = this.gameState.addLetter(letter);
-    if (added) {
-      this.boardRenderer.updateRow(this.currentRow, this.gameState.getCurrentGuess());
-    }
-  }
+  // Create the keyboard
+  createKeyboard();
   
-  /**
-   * Handles backspace input
-   */
-  handleBackspace() {
-    if (this.gameState.isGameOver()) return;
-    
-    const deleted = this.gameState.deleteLetter();
-    if (deleted) {
-      this.boardRenderer.updateRow(this.currentRow, this.gameState.getCurrentGuess());
-    }
-  }
+  // Add event listeners
+  document.addEventListener('keydown', handleKeyPress);
+}
+
+// Create the game board (6 rows x 5 columns)
+function createBoard() {
+  const board = document.getElementById('board');
+  board.innerHTML = '';
   
-  /**
-   * Handles enter/submit input
-   */
-  async handleEnter() {
-    if (this.gameState.isGameOver()) return;
+  for (let i = 0; i < 6; i++) {
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.id = `row-${i}`;
     
-    const result = this.gameState.submitGuess();
-    
-    if (!result.success) {
-      this._handleFailedSubmit(result.reason);
-      return;
+    for (let j = 0; j < 5; j++) {
+      const tile = document.createElement('div');
+      tile.className = 'tile';
+      tile.id = `tile-${i}-${j}`;
+      row.appendChild(tile);
     }
     
-    // Reveal the guess with animation
-    await this._revealCurrentGuess(result.evaluation);
-    
-    // Handle game end conditions
-    if (result.gameStatus === GameStatus.WON) {
-      this.messageManager.showSuccess('Excellent! You won!', true);
-      this.inputHandler.disable();
-    } else if (result.gameStatus === GameStatus.LOST) {
-      this.messageManager.show(`Game over! The word was "${this.gameState.secretWord}"`, true);
-      this.inputHandler.disable();
-    } else {
-      // Continue to next row
-      this.currentRow++;
-    }
-  }
-  
-  /**
-   * Handles failed guess submission
-   * @param {string} reason - Reason for failure
-   * @private
-   */
-  _handleFailedSubmit(reason) {
-    switch (reason) {
-      case 'not_enough_letters':
-        this.messageManager.showError('Not enough letters');
-        break;
-      case 'invalid_word':
-        this.messageManager.showError('Not in word list');
-        break;
-      case 'game_over':
-        // Silently ignore - game is already over
-        break;
-      default:
-        this.messageManager.showError('Invalid guess');
-    }
-  }
-  
-  /**
-   * Reveals the current guess with animation
-   * @param {Array<string>} evaluation - Letter evaluation results
-   * @private
-   */
-  async _revealCurrentGuess(evaluation) {
-    const guess = this.gameState.getGuesses()[this.currentRow].word;
-    
-    await this.boardRenderer.revealRow(this.currentRow, evaluation, (index, state) => {
-      // Update keyboard as each tile is revealed
-      this.keyboardRenderer.updateKeyState(guess[index], state);
-    });
-  }
-  
-  /**
-   * Gets current game statistics
-   * @returns {Object} Game stats
-   */
-  getStats() {
-    return {
-      guessesUsed: this.gameState.getGuesses().length,
-      remainingAttempts: this.gameState.getRemainingAttempts(),
-      status: this.gameState.getStatus(),
-      secretWord: this.gameState.secretWord // Only for debugging
-    };
+    board.appendChild(row);
   }
 }
 
-// Initialize and start the game when DOM is ready
-let game = null;
-
-window.addEventListener('DOMContentLoaded', () => {
-  game = new Game();
-  game.startNewGame();
+// Create the virtual keyboard
+function createKeyboard() {
+  const keyboard = document.getElementById('keyboard');
+  keyboard.innerHTML = '';
   
-  // Expose game instance for debugging (can be removed in production)
-  window.game = game;
-});
+  const rows = [
+    ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
+    ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'],
+    ['enter', 'z', 'x', 'c', 'v', 'b', 'n', 'm', 'backspace']
+  ];
+  
+  rows.forEach((rowKeys, index) => {
+    const rowDiv = document.createElement('div');
+    rowDiv.className = 'keyboard-row';
+    
+    rowKeys.forEach(key => {
+      const keyDiv = document.createElement('div');
+      keyDiv.className = 'key';
+      keyDiv.textContent = key === 'backspace' ? '⌫' : key.toUpperCase();
+      keyDiv.dataset.key = key;
+      
+      if (key === 'enter' || key === 'backspace') {
+        keyDiv.classList.add('large');
+      }
+      
+      keyDiv.addEventListener('click', () => handleKeyClick(key));
+      rowDiv.appendChild(keyDiv);
+    });
+    
+    keyboard.appendChild(rowDiv);
+  });
+}
 
-// Export for potential module usage
-export { Game };
+// Handle physical keyboard input
+function handleKeyPress(event) {
+  if (gameOver) return;
+  
+  const key = event.key.toLowerCase();
+  
+  if (key === 'enter') {
+    submitGuess();
+  } else if (key === 'backspace') {
+    deleteLetter();
+  } else if (/^[a-z]$/.test(key)) {
+    addLetter(key);
+  }
+}
+
+// Handle virtual keyboard click
+function handleKeyClick(key) {
+  if (gameOver) return;
+  
+  if (key === 'enter') {
+    submitGuess();
+  } else if (key === 'backspace') {
+    deleteLetter();
+  } else {
+    addLetter(key);
+  }
+}
+
+// Add a letter to the current guess
+function addLetter(letter) {
+  if (currentGuess.length < 5) {
+    currentGuess += letter;
+    updateCurrentRow();
+  }
+}
+
+// Delete the last letter from the current guess
+function deleteLetter() {
+  if (currentGuess.length > 0) {
+    currentGuess = currentGuess.slice(0, -1);
+    updateCurrentRow();
+  }
+}
+
+// Update the current row display
+function updateCurrentRow() {
+  const rowId = `row-${currentRow}`;
+  const row = document.getElementById(rowId);
+  const tiles = row.querySelectorAll('.tile');
+  
+  tiles.forEach((tile, index) => {
+    tile.textContent = currentGuess[index] || '';
+    if (currentGuess[index]) {
+      tile.dataset.state = 'active';
+    } else {
+      delete tile.dataset.state;
+    }
+  });
+}
+
+// Submit the current guess
+function submitGuess() {
+  if (currentGuess.length !== 5) {
+    showMessage('Not enough letters');
+    return;
+  }
+  
+  if (!WORDS.includes(currentGuess)) {
+    showMessage('Not in word list');
+    return;
+  }
+  
+  // Store the guess
+  guesses.push(currentGuess);
+  
+  // Reveal the guess with animation
+  revealGuess();
+}
+
+// Reveal the guess with color feedback
+function revealGuess() {
+  const row = document.getElementById(`row-${currentRow}`);
+  const tiles = row.querySelectorAll('.tile');
+  const guess = currentGuess;
+  const solution = secretWord;
+  
+  // Track which letters have been matched
+  const solutionLetters = solution.split('');
+  const result = Array(5).fill('absent');
+  
+  // First pass: mark correct letters (green)
+  for (let i = 0; i < 5; i++) {
+    if (guess[i] === solutionLetters[i]) {
+      result[i] = 'correct';
+      solutionLetters[i] = null; // Mark as used
+    }
+  }
+  
+  // Second pass: mark present letters (yellow)
+  for (let i = 0; i < 5; i++) {
+    if (result[i] !== 'correct' && solutionLetters.includes(guess[i])) {
+      result[i] = 'present';
+      const index = solutionLetters.indexOf(guess[i]);
+      solutionLetters[index] = null; // Mark as used
+    }
+  }
+  
+  // Animate each tile with delay
+  tiles.forEach((tile, index) => {
+    setTimeout(() => {
+      tile.classList.add('flip');
+      tile.dataset.state = result[index];
+      
+      // Update keyboard colors
+      const keyElement = document.querySelector(`.key[data-key="${guess[index]}"]`);
+      if (keyElement) {
+        const currentState = keyElement.dataset.state;
+        if (result[index] === 'correct') {
+          keyElement.dataset.state = 'correct';
+        } else if (result[index] === 'present' && currentState !== 'correct') {
+          keyElement.dataset.state = 'present';
+        } else if (result[index] === 'absent' && currentState !== 'correct' && currentState !== 'present') {
+          keyElement.dataset.state = 'absent';
+        }
+      }
+    }, index * 300);
+  });
+  
+  // Check win/lose after animation
+  setTimeout(() => {
+    if (guess === solution) {
+      showMessage('Excellent! You won!', true);
+      gameOver = true;
+    } else if (currentRow === 5) {
+      showMessage(`Game over! The word was "${secretWord}"`, true);
+      gameOver = true;
+    } else {
+      currentRow++;
+      currentGuess = '';
+    }
+  }, 5 * 300 + 200);
+}
+
+// Show a message to the user
+function showMessage(message, isFinal = false) {
+  const container = document.getElementById('message-container');
+  const messageDiv = document.createElement('div');
+  messageDiv.className = 'message';
+  messageDiv.textContent = message;
+  
+  container.innerHTML = '';
+  container.appendChild(messageDiv);
+  
+  if (!isFinal) {
+    setTimeout(() => {
+      container.innerHTML = '';
+    }, 2000);
+  }
+}
+
+// Start the game when the page loads
+window.addEventListener('DOMContentLoaded', initGame);

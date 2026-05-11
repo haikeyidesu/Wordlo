@@ -1,23 +1,6 @@
 {
-  "name": "wordlo-development",
-  "version": "1.0.0",
-  "description": "A refactored Wordle clone with modular architecture and DSA best practices",
+  "name": "js-adrap5",
+  "version": "0.0.0",
   "private": true,
-  "type": "module",
-  "scripts": {
-    "start": "npx http-server . -p 8000",
-    "dev": "npx http-server . -p 8000 --cors",
-    "test": "echo \"Tests coming soon\" && exit 0"
-  },
-  "keywords": [
-    "wordle",
-    "game",
-    "javascript",
-    "es6-modules"
-  ],
-  "author": "",
-  "license": "MIT",
-  "devDependencies": {
-    "http-server": "^14.1.1"
-  }
+  "dependencies": {}
 }

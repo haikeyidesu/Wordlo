@@ -33,7 +33,13 @@ export async function loadWords() {
   wordsCachePromise = (async () => {
     // Fetch the words file from the node_modules directory
     // Note: In production, you'd want to bundle this or serve it from a CDN
-    const response = await fetch('./node_modules/word-list/words.txt');
+    let response;
+    try {
+      response = await fetch('./node_modules/word-list/words.txt');
+    } catch (fetchError) {
+      console.error('Fetch failed:', fetchError);
+      throw new Error(`Failed to load words: Network error - ${fetchError.message}`);
+    }
     
     if (!response.ok) {
       throw new Error(`Failed to load words: ${response.status} ${response.statusText}`);

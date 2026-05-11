@@ -1,13 +1,21 @@
 ```
+<<<<<<< HEAD
 # Compiled and build artifacts
 *.pyc
 __pycache__/
 *.o
 *.obj
+=======
+# Dependencies
+node_modules/
+
+# Build artifacts
+>>>>>>> parent of bd54f3b (Merge pull request #3 from haikeyidesu/wordle-game-logic-4b35b)
 dist/
 build/
 target/
 
+<<<<<<< HEAD
 # Dependencies
 .venv/
 venv/
@@ -23,12 +31,17 @@ zig*/
 *.tmp
 *.swp
 *.swo
+=======
+# Logs
+*.log
+>>>>>>> parent of bd54f3b (Merge pull request #3 from haikeyidesu/wordle-game-logic-4b35b)
 
 # Environment
 .env
 .env.local
 *.env.*
 
+<<<<<<< HEAD
 # Editors
 .vscode/
 .idea/
@@ -36,12 +49,37 @@ zig*/
 # System files
 .DS_Store
 Thumbs.db
+=======
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.tmp
+
+# Python (if applicable)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
+.env/
+>>>>>>> parent of bd54f3b (Merge pull request #3 from haikeyidesu/wordle-game-logic-4b35b)
 
 # Coverage
 coverage/
 htmlcov/
 .coverage
 
+<<<<<<< HEAD
+=======
+# System
+.DS_Store
+Thumbs.db
+
+>>>>>>> parent of bd54f3b (Merge pull request #3 from haikeyidesu/wordle-game-logic-4b35b)
 # Compressed files
 *.zip
 *.gz
@@ -61,4 +99,11 @@ htmlcov/
 *.Z
 *.lz
 *.lzo
+<<<<<<< HEAD
+=======
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
+>>>>>>> parent of bd54f3b (Merge pull request #3 from haikeyidesu/wordle-game-logic-4b35b)
 ```
